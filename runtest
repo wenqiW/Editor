@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Run a test script for Ewoks.
+
+if [ $# -ne 1 ]; then echo "Usage: runtest infile" >&2; exit 2; fi
+
+infile=$1
+tmp=d$$
+
+if [ ! -r $infile ]; then echo "runtest: can't read $infile" >&2; exit 1; fi
+
+mkdir $tmp
+(cd $tmp; jar x) <$infile
+cat $tmp/comment
+
+# patch has a bug: can't use -o when the patch file might be empty.
+cp $tmp/file $tmp/file.1
+patch -s $tmp/file.1 <$tmp/diff
+
+(cd $tmp; java -cp ../bin ewoks.Testbed file keys >screen.2) &&
+diff $tmp/screen $tmp/screen.2 &&
+diff $tmp/file.1 $tmp/file
+
+rm -r $tmp

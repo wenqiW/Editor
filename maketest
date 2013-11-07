@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# Make a test script for Ewoks.  The test is a JAR file containing
+#
+#	comment		brief description of the test
+#	keys		recorded keystrokes
+#	file		original contents of file
+#	screen		final contents of screen
+#	diff		diff between old and new file contents
+
+if [ $# -ne 2 ]; then echo "Usage: maketest sample outfile" >&2; exit 2; fi
+
+sample=$1
+outfile=$2
+tmp=d$$
+
+if [ ! -r $sample ]; then echo "maketest: can't read $sample" >&2; exit 1; fi
+
+mkdir $tmp
+cp $sample $tmp/file
+(cd $tmp; env DRIBBLE=dribble java -cp ../bin ewoks.Ewoks file)
+mv $tmp/file $tmp/file1
+fmt $tmp/dribble >$tmp/keys
+
+# Replay the keystrokes
+echo -n "Replaying the session ... "
+cp $sample $tmp/file
+(cd $tmp; java -cp ../bin ewoks.Testbed file keys >screen)
+if cmp $tmp/file1 $tmp/file; then
+    echo OK
+else
+    exit 1
+fi
+
+diff $sample $tmp/file | tee $tmp/diff
+
+# Assemble the test case
+echo "Please type a brief description of the test:"
+read comment
+echo $comment >$tmp/comment
+cp $sample $tmp/file
+(cd $tmp; jar c comment keys file screen diff) >$outfile
+
+rm -r $tmp

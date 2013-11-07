@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Update a test script for Ewoks.
+
+if [ $# -ne 1 ]; then echo "Usage: bumptest infile" >&2; exit 2; fi
+
+infile=$1
+tmp=d$$
+
+if [ ! -r $infile ]; then echo "bumptest: can't read $infile" >&2; exit 1; fi
+
+mkdir $tmp
+(cd $tmp; jar x) <$infile
+cat $tmp/comment
+
+cp $tmp/file $tmp/file.0
+
+(cd $tmp; java -cp ../bin ewoks.Testbed file keys >screen.2) &&
+cp $tmp/screen.2 $tmp/screen &&
+(diff $tmp/file.0 $tmp/file >$tmp/diff; true) &&
+cp $tmp/file.0 $tmp/file
+
+(cd $tmp; jar c comment keys file screen diff) >$infile
+
+rm -r $tmp
